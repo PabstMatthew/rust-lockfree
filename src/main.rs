@@ -1,6 +1,7 @@
 #[macro_use]
 extern crate clap;
 pub mod cmdoptions;
+pub mod benchmark;
 
 ///
 /// main()
