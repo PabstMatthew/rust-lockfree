@@ -1,29 +1,27 @@
-//! 
+//!
 //! CmdOptions
-//! A simple tool for managing command line options for a Rust 
-//! lock-free benchmarking project. 
-//! 
+//! A simple tool for managing command line options for a Rust
+//! lock-free benchmarking project.
+//!
 extern crate clap;
 use benchmark::ImplType;
 use clap::{Arg, App};
 
 #[derive(Clone, Debug)]
-pub struct CmdOptions {    
+pub struct CmdOptions {
     // TODO command line options
     pub impl_type: ImplType,
     pub benchmark: String,
 }
 
 impl CmdOptions {
-
-    /// 
+    ///
     /// new()
     /// return a new options structure representing
     /// command line options or defaults. initialize
-    /// trace/log tools as well. 
+    /// trace/log tools as well.
     ///
     pub fn new() -> CmdOptions {
-    
         let default_impl = "mutex";
         let default_bench = "all";
 
@@ -44,7 +42,7 @@ impl CmdOptions {
                     .help("specifies the benchmark to run
                           \n\toptions include read, write, mixed, mem, and all"))
             .get_matches();
-        
+
         let impl_name = matches.value_of("impl").unwrap_or(default_impl);
         let impl_type = match impl_name.to_lowercase().as_str() {
             "mutex" => ImplType::MutexLock,

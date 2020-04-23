@@ -8,7 +8,7 @@ use std::error::Error;
 
 ///
 /// main()
-/// 
+///
 fn main() {
     let opts = cmdoptions::CmdOptions::new();
     let mut benchmarks: Vec<fn(ImplType) -> Result<i32, Box<dyn Error>>> = vec![];
