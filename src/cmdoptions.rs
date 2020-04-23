@@ -10,7 +10,8 @@ use clap::{Arg, App};
 #[derive(Clone, Debug)]
 pub struct CmdOptions {    
     // TODO command line options
-    impl_type: ImplType,
+    pub impl_type: ImplType,
+    pub benchmark: String,
 }
 
 impl CmdOptions {
@@ -23,7 +24,8 @@ impl CmdOptions {
     ///
     pub fn new() -> CmdOptions {
     
-        let default_impl = "MutexLock";
+        let default_impl = "mutex";
+        let default_bench = "all";
 
         let matches = App::new("rust-lockfree")
             .version("0.1.0")
@@ -34,7 +36,13 @@ impl CmdOptions {
                     .required(false)
                     .takes_value(true)
                     .help("specifies the implementation to evaluate
-                          \n\toptions include mutex, "))
+                          \n\toptions include mutex, spin, rw, lockfree, crossbeam, and custom"))
+            .arg(Arg::with_name("bench")
+                    .short("b")
+                    .required(false)
+                    .takes_value(true)
+                    .help("specifies the benchmark to run
+                          \n\toptions include read, write, mixed, mem, and all"))
             .get_matches();
         
         let impl_name = matches.value_of("impl").unwrap_or(default_impl);
@@ -45,11 +53,17 @@ impl CmdOptions {
             "lockfree" => ImplType::Lockfree,
             "crossbeam" => ImplType::Crossbeam,
             "custom" => ImplType::Custom,
-            _ => ImplType::MutexLock,
+            _ => {
+                assert!(false, "Invalid choice of implementation type!");
+                ImplType::MutexLock
+            },
         };
+
+        let benchmark = matches.value_of("bench").unwrap_or(default_bench);
 
         CmdOptions {
             impl_type: impl_type,
+            benchmark: benchmark.to_string(),
         }
     }
 }

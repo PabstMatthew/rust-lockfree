@@ -1,4 +1,5 @@
 use std::time::{Instant, Duration};
+use std::error::Error;
 
 #[derive(Clone, Debug)]
 pub enum ImplType {
@@ -11,12 +12,13 @@ pub enum ImplType {
 }
 
 pub struct Benchmark {
-    result: i32,
-    duration: std::time::Duration,
+    // TODO replace this once we know the specific type of error to return
+    pub result: Result<i32, Box<dyn Error>>, 
+    pub duration: Duration,
 }
 
 impl Benchmark {
-    pub fn new(impl_type: ImplType, benchmark: fn(ImplType) -> i32) -> Benchmark {
+    pub fn new(impl_type: ImplType, benchmark: fn(ImplType) -> Result<i32, Box<dyn Error>>) -> Benchmark {
         let start = Instant::now();
         let result = benchmark(impl_type);
         let duration = start.elapsed();
