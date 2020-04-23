@@ -1,19 +1,38 @@
-use benchmark::ImplType;
+use queue::{Queue};
 use std::error::Error;
 
-pub fn read_heavy(impl_type: ImplType) -> Result<i32, Box<dyn Error>> {
+#[derive(Clone, Debug)]
+pub enum WorkloadType {
+    ReadHeavy,
+    WriteHeavy,
+    Mixed,
+    MemoryHeavy,
+}
+
+pub fn run_workload<T>(t: &WorkloadType, q: &Box<dyn Queue<T>>) 
+    -> Result<i32, Box<dyn Error>> {
+
+    match t {
+        WorkloadType::ReadHeavy => read_heavy::<T>(q),
+        WorkloadType::WriteHeavy => write_heavy::<T>(q),
+        WorkloadType::Mixed => mixed::<T>(q),
+        WorkloadType::MemoryHeavy => memory_heavy::<T>(q),
+    }
+}
+
+fn read_heavy<T>(_queue: &Box<dyn Queue<T>>) -> Result<i32, Box<dyn Error>> {
     Ok(0)
 }
 
-pub fn write_heavy(impl_type: ImplType) -> Result<i32, Box<dyn Error>> {
+fn write_heavy<T>(_queue: &Box<dyn Queue<T>>) -> Result<i32, Box<dyn Error>> {
     Ok(0)
 }
 
-pub fn mixed(impl_type: ImplType) -> Result<i32, Box<dyn Error>> {
+fn mixed<T>(_queue: &Box<dyn Queue<T>>) -> Result<i32, Box<dyn Error>> {
     Ok(0)
 }
 
-pub fn mem_heavy(impl_type: ImplType) -> Result<i32, Box<dyn Error>> {
+fn memory_heavy<T>(_queue: &Box<dyn Queue<T>>) -> Result<i32, Box<dyn Error>> {
     Ok(0)
 }
 
