@@ -1,4 +1,7 @@
 extern crate clap;
+extern crate spin;
+extern crate crossbeam_queue;
+extern crate lockfree;
 pub mod cmdoptions;
 pub mod benchmark;
 pub mod kernels;
