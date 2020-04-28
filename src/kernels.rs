@@ -1,5 +1,6 @@
-use queue::{Queue};
 use std::error::Error;
+use std::sync::Arc;
+use sync_queue::{SyncQueue};
 
 #[derive(Clone, Debug)]
 pub enum WorkloadType {
@@ -9,7 +10,7 @@ pub enum WorkloadType {
     MemoryHeavy,
 }
 
-pub fn run_workload<T>(t: &WorkloadType, q: &Box<dyn Queue<T>>) 
+pub fn run_workload<T: 'static>(t: &WorkloadType, q: Arc<Box<dyn SyncQueue<T>>>) 
     -> Result<i32, Box<dyn Error>> {
 
     match t {
@@ -20,19 +21,19 @@ pub fn run_workload<T>(t: &WorkloadType, q: &Box<dyn Queue<T>>)
     }
 }
 
-fn read_heavy<T>(_queue: &Box<dyn Queue<T>>) -> Result<i32, Box<dyn Error>> {
+fn read_heavy<T: 'static>(_queue: Arc<Box<dyn SyncQueue<T>>>) -> Result<i32, Box<dyn Error>> {
     Ok(0)
 }
 
-fn write_heavy<T>(_queue: &Box<dyn Queue<T>>) -> Result<i32, Box<dyn Error>> {
+fn write_heavy<T: 'static>(_queue: Arc<Box<dyn SyncQueue<T>>>) -> Result<i32, Box<dyn Error>> {
     Ok(0)
 }
 
-fn mixed<T>(_queue: &Box<dyn Queue<T>>) -> Result<i32, Box<dyn Error>> {
+fn mixed<T: 'static>(_queue: Arc<Box<dyn SyncQueue<T>>>) -> Result<i32, Box<dyn Error>> {
     Ok(0)
 }
 
-fn memory_heavy<T>(_queue: &Box<dyn Queue<T>>) -> Result<i32, Box<dyn Error>> {
+fn memory_heavy<T: 'static>(_queue: Arc<Box<dyn SyncQueue<T>>>) -> Result<i32, Box<dyn Error>> {
     Ok(0)
 }
 

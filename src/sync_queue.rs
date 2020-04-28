@@ -4,9 +4,9 @@ use spin::Mutex as Spinlock;
 use crossbeam_queue::SegQueue;
 use lockfree::queue::Queue as LFQueue;
 
-pub trait Queue<T> {
-    fn pop(&mut self) -> Option<T>;
-    fn push(&mut self, T) -> ();
+pub trait SyncQueue<T>: Send + Sync {
+    fn pop(&self) -> Option<T>;
+    fn push(&self, T) -> ();
     // TODO: add a peek or something?
 }
 
@@ -21,7 +21,7 @@ pub enum ImplType {
 }
 
 // // Constructor function for building queues given an ImplType.
-pub fn create_impl<T: 'static>(t: &ImplType) -> Box<dyn Queue::<T>> {
+pub fn create_impl<T: 'static + Sync + Send>(t: &ImplType) -> Box<dyn SyncQueue::<T>> {
     match t {
         ImplType::MutexLock => Box::new(MutexQueue::<T>::new()),
         ImplType::SpinLock => Box::new(SpinQueue::<T>::new()),
@@ -43,13 +43,13 @@ impl<T> MutexQueue<T> {
 }
 
 
-impl<T> Queue<T> for MutexQueue<T> {
-    fn pop(&mut self) -> Option<T> {
+impl<T: Send + Sync> SyncQueue<T> for MutexQueue<T> {
+    fn pop(&self) -> Option<T> {
         let mut q = self.lockedq.lock().unwrap();
         q.pop_front()
     }
 
-    fn push(&mut self, elem: T) {
+    fn push(&self, elem: T) {
         let mut q = self.lockedq.lock().unwrap();
         q.push_back(elem);
     }
@@ -67,13 +67,13 @@ impl<T> SpinQueue<T> {
 }
 
 
-impl<T> Queue<T> for SpinQueue<T> {
-    fn pop(&mut self) -> Option<T> {
+impl<T: Send + Sync> SyncQueue<T> for SpinQueue<T> {
+    fn pop(&self) -> Option<T> {
         let mut q = self.lockedq.lock();
         q.pop_front()
     }
 
-    fn push(&mut self, elem: T) {
+    fn push(&self, elem: T) {
         let mut q = self.lockedq.lock();
         q.push_back(elem);
     }
@@ -92,12 +92,12 @@ impl<T> CrossbeamQueue<T> {
 }
 
 
-impl<T> Queue<T> for CrossbeamQueue<T> {
-    fn pop(&mut self) -> Option<T> {
+impl<T: Send + Sync> SyncQueue<T> for CrossbeamQueue<T> {
+    fn pop(&self) -> Option<T> {
         self.q.pop().ok()
     }
 
-    fn push(&mut self, elem: T) {
+    fn push(&self, elem: T) {
         self.q.push(elem)
     }
 }
@@ -114,12 +114,12 @@ impl<T> LockfreeQueue<T> {
 }
 
 
-impl<T> Queue<T> for LockfreeQueue<T> {
-    fn pop(&mut self) -> Option<T> {
+impl<T: Send + Sync> SyncQueue<T> for LockfreeQueue<T> {
+    fn pop(&self) -> Option<T> {
         self.q.pop()
     }
 
-    fn push(&mut self, elem: T) {
+    fn push(&self, elem: T) {
         self.q.push(elem)
     }
 }

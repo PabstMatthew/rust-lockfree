@@ -5,7 +5,7 @@ extern crate lockfree;
 pub mod cmdoptions;
 pub mod benchmark;
 pub mod kernels;
-pub mod queue;
+pub mod sync_queue;
 use kernels::{WorkloadType};
 use benchmark::{Benchmark};
 

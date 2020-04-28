@@ -4,7 +4,7 @@
 //! lock-free benchmarking project.
 //!
 extern crate clap;
-use queue::ImplType;
+use sync_queue::ImplType;
 use clap::{Arg, App};
 
 #[derive(Clone, Debug)]
