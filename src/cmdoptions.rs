@@ -54,7 +54,6 @@ impl CmdOptions {
         let impl_type = match impl_name.to_lowercase().as_str() {
             "mutex" => ImplType::MutexLock,
             "spin" => ImplType::SpinLock,
-            "rw" => ImplType::RWLock,
             "lockfree" => ImplType::Lockfree,
             "crossbeam" => ImplType::Crossbeam,
             "custom" => ImplType::Custom,

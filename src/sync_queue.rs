@@ -25,7 +25,7 @@ pub fn create_impl<T: 'static + Sync + Send>(t: &ImplType) -> Box<dyn SyncQueue:
         ImplType::SpinLock => Box::new(SpinQueue::<T>::new()),
         ImplType::Crossbeam => Box::new(CrossbeamQueue::<T>::new()),
         ImplType::Lockfree => Box::new(LockfreeQueue::<T>::new()),
-        _ => Box::new(MutexQueue::<T>::new()),
+        _ => panic!("Unimplemented queue {:?}", t),
     }
 }
 
