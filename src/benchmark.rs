@@ -1,22 +1,21 @@
 use std::time::{Instant, Duration};
-use std::error::Error;
 use std::sync::Arc;
 use sync_queue::{SyncQueue, ImplType, create_impl};
-use kernels::{WorkloadType, run_workload};
+use kernels::{BenchmarkError, WorkloadType, run_workload};
 
-pub struct Benchmark<T> {
-    queue: Arc<Box<dyn SyncQueue::<T>>>,
+pub struct Benchmark {
+    queue: Arc<Box<dyn SyncQueue<u64>>>,
     workload_type: WorkloadType,
 }
 
 pub struct BenchmarkResult {
     // TODO replace this once we know the specific type of error to return
-    pub result: Result<i32, Box<dyn Error>>, 
+    pub result: Result<i32, BenchmarkError>, 
     pub duration: Duration,
 }
 
-impl<T: 'static + Send + Sync> Benchmark<T> {
-    pub fn new(impl_type: &ImplType, workload_type: &WorkloadType) -> Benchmark<T> {
+impl Benchmark {
+    pub fn new(impl_type: &ImplType, workload_type: &WorkloadType) -> Benchmark {
         let queue = Arc::new(create_impl(impl_type));
         Benchmark {
             queue: queue,

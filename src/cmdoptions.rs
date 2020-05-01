@@ -12,6 +12,7 @@ pub struct CmdOptions {
     // TODO command line options
     pub impl_type: ImplType,
     pub benchmark: String,
+    pub verbosity: usize,
 }
 
 impl CmdOptions {
@@ -24,6 +25,7 @@ impl CmdOptions {
     pub fn new() -> CmdOptions {
         let default_impl = "mutex";
         let default_bench = "all";
+        let default_verbosity = "0";
 
         let matches = App::new("rust-lockfree")
             .version("0.1.0")
@@ -41,6 +43,11 @@ impl CmdOptions {
                     .takes_value(true)
                     .help("specifies the benchmark to run
                           \n\toptions include read, write, mixed, mem, and all"))
+            .arg(Arg::with_name("verbose")
+                    .short("v")
+                        .required(false)
+                        .takes_value(true)
+                        .help("produce verbose output: 0->none, 5->*most* verbose"))
             .get_matches();
 
         let impl_name = matches.value_of("impl").unwrap_or(default_impl);
@@ -57,11 +64,13 @@ impl CmdOptions {
             },
         };
 
-        let benchmark = matches.value_of("bench").unwrap_or(default_bench);
+        let benchmark = matches.value_of("bench").unwrap_or(default_bench).to_string();
+        let verbosity = matches.value_of("verbose").unwrap_or(default_verbosity).parse::<usize>().unwrap();
 
         CmdOptions {
             impl_type: impl_type,
-            benchmark: benchmark.to_string(),
+            benchmark: benchmark,
+            verbosity: verbosity,
         }
     }
 }

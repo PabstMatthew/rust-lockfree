@@ -7,20 +7,18 @@ use lockfree::queue::Queue as LFQueue;
 pub trait SyncQueue<T>: Send + Sync {
     fn pop(&self) -> Option<T>;
     fn push(&self, T) -> ();
-    // TODO: add a peek or something?
 }
 
 #[derive(Clone, Debug)]
 pub enum ImplType {
     MutexLock,
     SpinLock,
-    RWLock, // TODO this is useless if we don't need peek
     Crossbeam,
     Lockfree,
     Custom, // TODO eventually
 }
 
-// // Constructor function for building queues given an ImplType.
+/// Constructor function for building queues given an ImplType.
 pub fn create_impl<T: 'static + Sync + Send>(t: &ImplType) -> Box<dyn SyncQueue::<T>> {
     match t {
         ImplType::MutexLock => Box::new(MutexQueue::<T>::new()),
@@ -31,7 +29,7 @@ pub fn create_impl<T: 'static + Sync + Send>(t: &ImplType) -> Box<dyn SyncQueue:
     }
 }
 
-// MPMC Queue implemented with mutexes
+/// MPMC Queue implemented with mutexes
 struct MutexQueue<T> {
     lockedq: Mutex<VecDeque<T>>,
 }
@@ -55,7 +53,7 @@ impl<T: Send + Sync> SyncQueue<T> for MutexQueue<T> {
     }
 }
 
-// MPMC Queue implemented with spinlocks
+/// MPMC Queue implemented with spinlocks
 struct SpinQueue<T> {
     lockedq: Spinlock<VecDeque<T>>,
 }
@@ -79,8 +77,8 @@ impl<T: Send + Sync> SyncQueue<T> for SpinQueue<T> {
     }
 }
 
-// MPMC Queue implemented as a Michael Scott segmented lockfree queue
-//  using the crossbeam crate
+/// MPMC Queue implemented as a Michael Scott segmented lockfree queue
+/// using the crossbeam crate
 struct CrossbeamQueue<T> {
     q: SegQueue<T>,
 }
@@ -102,7 +100,7 @@ impl<T: Send + Sync> SyncQueue<T> for CrossbeamQueue<T> {
     }
 }
 
-// MPMC lockfree queue from the lockfree crate
+/// MPMC lockfree queue from the lockfree crate
 struct LockfreeQueue<T> {
     q: LFQueue<T>,
 }
