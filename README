@@ -1,8 +1,0 @@
-# rust-lockfree
-A benchmark suite for lock-free queues/stacks in Rust, and a custom implementation.
-
-## Building
-```cargo build```
-
-## Running
-
