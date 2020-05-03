@@ -65,6 +65,13 @@ fn read_heavy(queue: Arc<Box<dyn SyncQueue<u64>>>) -> Result<i32, BenchmarkError
     let num_ints = 2 << 20;
     let expected_primes = 155886;
 
+    // Initialize queue with work, including implicit exit messages
+    trace!("Pushing work to worker threads ...");
+    for i in 0..(num_ints+num_readers+1) {
+        queue.push(i);
+    }
+
+    // Start consumer threads
     trace!("Starting worker threads ...");
     let num_primes = Arc::new(AtomicI32::new(0));
     let mut handles = vec![];
@@ -89,12 +96,6 @@ fn read_heavy(queue: Arc<Box<dyn SyncQueue<u64>>>) -> Result<i32, BenchmarkError
         handles.push(handle);
     }
 
-    // Send out all work, including implicit exit messages
-    trace!("Pushing work to worker threads ...");
-    for i in 0..(num_ints+num_readers+1) {
-        queue.push(i);
-    }
-
     // Wait for all threads to return
     trace!("Waiting for worker threads to return ...");
     while let Some(handle) = handles.pop() {
@@ -109,9 +110,44 @@ fn read_heavy(queue: Arc<Box<dyn SyncQueue<u64>>>) -> Result<i32, BenchmarkError
     }
 }
 
-fn write_heavy(_queue: Arc<Box<dyn SyncQueue<u64>>>) -> Result<i32, BenchmarkError> {
+/// Many worker threads search for primes and push to the queue if one is found.
+fn write_heavy(queue: Arc<Box<dyn SyncQueue<u64>>>) -> Result<i32, BenchmarkError> {
     info!("Running write-heavy benchmark ...");
-    Ok(0)
+    let num_writers = 17; // To distribute write contention, it's best if this is an odd prime.
+    let num_ints = 2 << 20;
+    let expected_primes = 155886;
+
+    // Start all producer threads
+    trace!("Starting worker threads ...");
+    let mut handles = vec![];
+    for tid in 0..num_writers {
+        let qcopy = queue.clone();
+        let handle = thread::spawn(move ||{
+            for i in (tid..num_ints).step_by(num_writers) {
+                if is_prime(i as u64) {
+                    qcopy.push(1);
+                }
+            }
+        });
+        handles.push(handle);
+    }
+
+    // Wait for all threads to return
+    trace!("Waiting for worker threads to return ...");
+    while let Some(handle) = handles.pop() {
+        handle.join().unwrap();
+    }
+
+    // Check that the produced values match the expected
+    let mut num_primes = 0;
+    while let Some(_) = queue.pop() {
+        num_primes += 1;
+    }
+    if num_primes == expected_primes {
+        Ok(num_primes)
+    } else {
+        Err(BenchmarkError { expected: expected_primes, actual: num_primes })
+    }
 }
 
 fn mixed(_queue: Arc<Box<dyn SyncQueue<u64>>>) -> Result<i32, BenchmarkError> {

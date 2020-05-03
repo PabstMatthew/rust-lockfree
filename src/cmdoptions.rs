@@ -36,7 +36,7 @@ impl CmdOptions {
                     .required(false)
                     .takes_value(true)
                     .help("specifies the implementation to evaluate
-                          \n\toptions include mutex, spin, rw, lockfree, crossbeam, and custom"))
+                          \n\toptions include mutex, spin, lockfree, crossbeam, and custom"))
             .arg(Arg::with_name("bench")
                     .short("b")
                     .required(false)

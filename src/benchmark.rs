@@ -9,7 +9,6 @@ pub struct Benchmark {
 }
 
 pub struct BenchmarkResult {
-    // TODO replace this once we know the specific type of error to return
     pub result: Result<i32, BenchmarkError>, 
     pub duration: Duration,
 }
