@@ -2,11 +2,13 @@
 A benchmark suite for lock-free queues/stacks in Rust, and a custom implementation.
 
 ## Building
-```cargo build 
+```bash
+cargo build 
 ```
 
 ## Running
-```./target/debug/rust-lockfree -h
+```bash
+./target/debug/rust-lockfree -h
 ```
 
 ## TODO
