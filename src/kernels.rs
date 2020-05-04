@@ -2,7 +2,6 @@ use std::sync::Arc;
 use log::{trace, info};
 use std::sync::atomic::{AtomicI32, Ordering};
 use std::thread;
-use std::time::Duration;
 use std::fmt;
 use sync_queue::{SyncQueue};
 
@@ -67,7 +66,7 @@ fn read_heavy(queue: Arc<Box<dyn SyncQueue<u64>>>) -> Result<i32, BenchmarkError
 
     // Initialize queue with work, including implicit exit messages
     trace!("Pushing work to worker threads ...");
-    for i in 0..(num_ints+num_readers+1) {
+    for i in 0..num_ints {
         queue.push(i);
     }
 
@@ -82,14 +81,12 @@ fn read_heavy(queue: Arc<Box<dyn SyncQueue<u64>>>) -> Result<i32, BenchmarkError
             loop {
                 match qcopy.pop() {
                     Some(x) => {
-                        if x > num_ints {
-                            break
-                        } else if is_prime(x) {
+                        if is_prime(x) {
                             npcopy.fetch_add(1, Ordering::Relaxed);
                         }
                     },
-                    // No work to do ... wait a little bit?
-                    None => thread::sleep(Duration::from_millis(100)),
+                    // No work to do ... leave!
+                    None => break,
                 }
             }
         });
