@@ -4,6 +4,7 @@ use std::sync::atomic::{AtomicI32, Ordering};
 use std::thread;
 use std::fmt;
 use sync_queue::{SyncQueue};
+use std::time::Duration;
 
 // Used to indicate that a benchmark failed due to the queue implementation
 pub struct BenchmarkError {
@@ -147,9 +148,62 @@ fn write_heavy(queue: Arc<Box<dyn SyncQueue<u64>>>) -> Result<i32, BenchmarkErro
     }
 }
 
-fn mixed(_queue: Arc<Box<dyn SyncQueue<u64>>>) -> Result<i32, BenchmarkError> {
+fn mixed(queue: Arc<Box<dyn SyncQueue<u64>>>) -> Result<i32, BenchmarkError> {
     info!("Running mixed benchmark ...");
-    Ok(0)
+    let num_readers = 8;
+    let num_writers = 8;
+    let num_ints = 2 << 20;
+    let expected_primes = 155886;
+
+    // Start all producer threads
+    trace!("Starting worker threads ...");
+    let mut handles = vec![];
+    for tid in 0..num_writers {
+        let qcopy = queue.clone();
+        let handle = thread::spawn(move ||{
+            for i in (tid..(num_ints+num_readers+1)).step_by(num_writers) {
+                qcopy.push(i as u64);
+            }
+        });
+        handles.push(handle);
+    }
+
+    // Start consumer threads
+    trace!("Starting worker threads ...");
+    let num_primes = Arc::new(AtomicI32::new(0));
+    for _ in 0..num_readers {
+        let qcopy = queue.clone();
+        let npcopy = num_primes.clone();
+        let handle = thread::spawn(move ||{
+            loop {
+                match qcopy.pop() {
+                    Some(x) => {
+                        if x > num_ints as u64 {
+                            break
+                        } else if is_prime(x) {
+                            npcopy.fetch_add(1, Ordering::Relaxed);
+                        }
+                    },
+                    // No work to do ... sleep
+                    None => thread::sleep(Duration::from_millis(100)),
+                }
+            }
+        });
+        handles.push(handle);
+    }
+
+    // Wait for all threads to return
+    trace!("Waiting for worker threads to return ...");
+    while let Some(handle) = handles.pop() {
+        handle.join().unwrap();
+    }
+
+    let result = num_primes.load(Ordering::SeqCst);
+    if result == expected_primes {
+        Ok(result)
+    } else {
+        Err(BenchmarkError { expected: expected_primes, actual: result })
+    }
 }
 
 fn memory_heavy(_queue: Arc<Box<dyn SyncQueue<u64>>>) -> Result<i32, BenchmarkError> {
