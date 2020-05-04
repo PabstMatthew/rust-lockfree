@@ -13,7 +13,7 @@ cargo build
 
 ## TODO
 1. Write mixed and memory-heavy benchmarks.
-2. Write custom lockfree implementation.
+2. Complete custom lockfree queue implementation.
 3. Write evaluation scripts.
 4. Evaluate and write report.
 

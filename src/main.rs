@@ -8,6 +8,7 @@ pub mod cmdoptions;
 pub mod benchmark;
 pub mod kernels;
 pub mod sync_queue;
+pub mod custom_queue;
 use kernels::{WorkloadType};
 use benchmark::{Benchmark};
 use log::{info};

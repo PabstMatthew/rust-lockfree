@@ -3,6 +3,7 @@ use std::sync::Mutex;
 use spin::Mutex as Spinlock;
 use crossbeam_queue::SegQueue;
 use lockfree::queue::Queue as LFQueue;
+use custom_queue::CustomQueue;
 
 pub trait SyncQueue<T>: Send + Sync {
     fn pop(&self) -> Option<T>;
@@ -25,7 +26,7 @@ pub fn create_impl<T: 'static + Sync + Send>(t: &ImplType) -> Box<dyn SyncQueue:
         ImplType::SpinLock => Box::new(SpinQueue::<T>::new()),
         ImplType::Crossbeam => Box::new(CrossbeamQueue::<T>::new()),
         ImplType::Lockfree => Box::new(LockfreeQueue::<T>::new()),
-        _ => panic!("Unimplemented queue {:?}", t),
+        ImplType::Custom => Box::new(OurQueue::<T>::new()),
     }
 }
 
@@ -113,6 +114,27 @@ impl<T> LockfreeQueue<T> {
 
 
 impl<T: Send + Sync> SyncQueue<T> for LockfreeQueue<T> {
+    fn pop(&self) -> Option<T> {
+        self.q.pop()
+    }
+
+    fn push(&self, elem: T) {
+        self.q.push(elem)
+    }
+}
+
+struct OurQueue<T> {
+    q: CustomQueue<T>,
+}
+
+impl<T> OurQueue<T> {
+    pub fn new() -> OurQueue<T> {
+        OurQueue { q: CustomQueue::new(), }
+    }
+}
+
+
+impl<T: Send + Sync> SyncQueue<T> for OurQueue<T> {
     fn pop(&self) -> Option<T> {
         self.q.pop()
     }
