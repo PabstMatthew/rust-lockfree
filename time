@@ -1,0 +1,87 @@
+#!/usr/bin/env python3
+import sys, os
+import re
+import subprocess
+import numpy as np
+import pandas as pd
+
+from statistics import mean
+
+# N   = times to run for each measurement
+# CUT = outliers to cut from both ends
+# N, CUT = 6, 1
+N, CUT = 1, 0
+
+IMPLS = [
+    "mutex",
+    "spin",
+    "lockfree",
+    "crossbeam",
+    "custom",
+]
+def write(msg):
+    sys.stdout.write(msg)
+    sys.stdout.flush()
+
+def run(cmd):
+    cmd = cmd.strip()
+    result = subprocess.run(cmd.split(),
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE)
+    stdout = result.stdout.decode("utf-8").strip()
+    stderr = result.stderr.decode("utf-8").strip()
+
+    if result.returncode != 0:
+        write("\nCommand '{}' returned exit code {}\n{}\n{}\n".format(cmd,
+            result.returncode, stdout, stderr))
+        sys.exit(1)
+    return stdout
+
+def get_times(impl):
+    read, write, mixed, mem = [-1] * 4
+
+    cmd = "./target/debug/rust-lockfree -i {} -b all -v 0".format(impl)
+    out = run(cmd)
+    for l in out.split("\n"):
+        ints = [int(s) for s in l.split() if s.isdigit()]
+        if "ReadHeavy" in l:
+            read = ints[0]
+        elif "WriteHeavy" in l:
+            write = ints[0]
+        elif "Mixed" in l:
+            mixed = ints[0]
+        elif "MemoryHeavy" in l:
+            mem = ints[0]
+    return read, write, mixed, mem
+
+def get_avg_times(impl):
+    t = [[], [], [], []]
+    for _ in range(N):
+        r, w, mx, mm = get_times(impl)
+        t[0].append(r)
+        t[1].append(w)
+        t[2].append(mx)
+        t[3].append(mm)
+
+    t = [sorted(l) for l in t]
+    if CUT > 0:
+        t = [l[CUT:-CUT] for l in t]
+    t = [mean(l) for l in t]
+
+    return t
+
+if __name__ == '__main__':
+    run("cargo build")
+    print("Running {} time(s)\n"
+          "Removing {} outliers from each end".format(N, CUT))
+
+    d = [[i] + get_avg_times(i) for i in IMPLS]
+    df = pd.DataFrame(np.array(d),
+        columns=["impl",
+            "ReadHeavy",
+            "WriteHeavy",
+            "Mixed",
+            "MemoryHeavy"
+        ])
+    print(df)
+    df.to_csv("times.csv", index=False)

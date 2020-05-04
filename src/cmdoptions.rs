@@ -57,10 +57,7 @@ impl CmdOptions {
             "lockfree" => ImplType::Lockfree,
             "crossbeam" => ImplType::Crossbeam,
             "custom" => ImplType::Custom,
-            _ => {
-                assert!(false, "Invalid choice of implementation type!");
-                ImplType::MutexLock
-            },
+            _ => panic!("Invalid choice of implementation type!"),
         };
 
         let benchmark = matches.value_of("bench").unwrap_or(default_bench).to_string();

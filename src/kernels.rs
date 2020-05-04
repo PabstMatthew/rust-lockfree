@@ -26,7 +26,7 @@ pub enum WorkloadType {
     MemoryHeavy,
 }
 
-pub fn run_workload(t: &WorkloadType, q: Arc<Box<dyn SyncQueue<u64>>>) 
+pub fn run_workload(t: &WorkloadType, q: Arc<Box<dyn SyncQueue<u64>>>)
     -> Result<i32, BenchmarkError> {
 
     match t {
@@ -42,7 +42,7 @@ fn is_prime(num: u64) -> bool {
     if num < 2 {
         false
     } else if num < 4 {
-        true 
+        true
     } else if num % 2 == 0 {
         false
     } else {
@@ -56,7 +56,7 @@ fn is_prime(num: u64) -> bool {
     }
 }
 
-/// A single thread produces many integers, 
+/// A single thread produces many integers,
 /// while many reader threads consume the values, and check primality.
 fn read_heavy(queue: Arc<Box<dyn SyncQueue<u64>>>) -> Result<i32, BenchmarkError> {
     info!("Running read-heavy benchmark ...");

@@ -9,7 +9,7 @@ pub struct Benchmark {
 }
 
 pub struct BenchmarkResult {
-    pub result: Result<i32, BenchmarkError>, 
+    pub result: Result<i32, BenchmarkError>,
     pub duration: Duration,
 }
 

@@ -32,7 +32,7 @@ fn main() {
         "mixed" => workloads.push(WorkloadType::Mixed),
         "mem" => workloads.push(WorkloadType::MemoryHeavy),
         "all" => workloads = vec![WorkloadType::ReadHeavy, WorkloadType::WriteHeavy, WorkloadType::Mixed, WorkloadType::MemoryHeavy],
-        _ => assert!(false, "Invalid choice of benchmark!"),
+        _ => panic!("Invalid choice of benchmark!"),
     }
 
     // Run each benchmark
@@ -41,7 +41,7 @@ fn main() {
         let mut bench = Benchmark::new(&opts.impl_type, workload);
         let res = bench.run();
         match res.result {
-            Ok(_) => println!("Completed in {} ms.", res.duration.as_millis()),
+            Ok(_) => println!("Completed {:?} in {} ms.", &workload, res.duration.as_millis()),
             Err(e) => println!("Failed due to error: {}", e),
         }
     }
