@@ -26,14 +26,14 @@ pub enum WorkloadType {
     MemoryHeavy,
 }
 
-pub fn run_workload(wt: &WorkloadType, it: &ImplType)
+pub fn run_workload(n_threads: usize, wt: &WorkloadType, it: &ImplType)
     -> Result<i32, BenchmarkError> {
 
     match wt {
-        WorkloadType::ReadHeavy => read_heavy(Arc::new(create_impl::<u64>(it))),
-        WorkloadType::WriteHeavy => write_heavy(Arc::new(create_impl::<u64>(it))),
-        WorkloadType::Mixed => mixed(Arc::new(create_impl::<u64>(it))),
-        WorkloadType::MemoryHeavy => memory_heavy(Arc::new(create_impl::<u64>(it))),
+        WorkloadType::ReadHeavy => read_heavy(Arc::new(create_impl::<u64>(it)), n_threads),
+        WorkloadType::WriteHeavy => write_heavy(Arc::new(create_impl::<u64>(it)), n_threads),
+        WorkloadType::Mixed => mixed(Arc::new(create_impl::<u64>(it)), n_threads),
+        WorkloadType::MemoryHeavy => memory_heavy(Arc::new(create_impl::<u64>(it)), n_threads),
     }
 }
 
@@ -58,10 +58,10 @@ fn is_prime(num: u64) -> bool {
 
 /// A single thread produces many integers,
 /// while many reader threads consume the values, and check primality.
-fn read_heavy(queue: Arc<Box<dyn SyncQueue<u64>>>) -> Result<i32, BenchmarkError> {
+fn read_heavy(queue: Arc<Box<dyn SyncQueue<u64>>>, n_threads: usize) -> Result<i32, BenchmarkError> {
     info!("Running read-heavy benchmark ...");
     // Benchmark constants
-    let num_readers = 16;
+    let num_readers = n_threads;
     let num_ints = 2 << 20;
     let expected_primes = 155886;
 
@@ -109,9 +109,9 @@ fn read_heavy(queue: Arc<Box<dyn SyncQueue<u64>>>) -> Result<i32, BenchmarkError
 }
 
 /// Many worker threads search for primes and push to the queue if one is found.
-fn write_heavy(queue: Arc<Box<dyn SyncQueue<u64>>>) -> Result<i32, BenchmarkError> {
+fn write_heavy(queue: Arc<Box<dyn SyncQueue<u64>>>, n_threads: usize) -> Result<i32, BenchmarkError> {
     info!("Running write-heavy benchmark ...");
-    let num_writers = 17; // To distribute write contention, it's best if this is an odd prime.
+    let num_writers = n_threads+1; // To distribute write contention, it's best if this is an odd prime.
     let num_ints = 2 << 20;
     let expected_primes = 155886;
 
@@ -148,10 +148,10 @@ fn write_heavy(queue: Arc<Box<dyn SyncQueue<u64>>>) -> Result<i32, BenchmarkErro
     }
 }
 
-fn mixed(queue: Arc<Box<dyn SyncQueue<u64>>>) -> Result<i32, BenchmarkError> {
+fn mixed(queue: Arc<Box<dyn SyncQueue<u64>>>, n_threads: usize) -> Result<i32, BenchmarkError> {
     info!("Running mixed benchmark ...");
-    let num_readers = 8;
-    let num_writers = 8;
+    let num_readers = n_threads / 2;
+    let num_writers = n_threads / 2;
     let num_ints = 2 << 20;
     let expected_primes = 155886;
 
@@ -206,39 +206,45 @@ fn mixed(queue: Arc<Box<dyn SyncQueue<u64>>>) -> Result<i32, BenchmarkError> {
     }
 }
 
-fn memory_heavy(queue: Arc<Box<dyn SyncQueue<u64>>>)
+fn memory_heavy(queue: Arc<Box<dyn SyncQueue<u64>>>, n_threads: usize)
     -> Result<i32, BenchmarkError> {
     info!("Running memory-heavy benchmark ...");
+    let num_readers = n_threads / 2;
+    let num_writers = n_threads / 2;
 
     // Benchmark constants
     let num = 2 << 22;
 
     trace!("Starting worker thread...");
     let mut handles = vec![];
-    let qcopy = queue.clone();
-    let handle = thread::spawn(move ||{
-        for i in 0..num {
-            qcopy.push(i);
-        }
-    });
-    handles.push(handle);
+    for tid in 0..num_readers {
+        let qcopy = queue.clone();
+        let handle = thread::spawn(move ||{
+            for i in (tid..(num+num_readers+1)).step_by(num_writers) {
+                qcopy.push(i as u64);
+            }
+        });
+        handles.push(handle);
+    }
 
     trace!("Starting worker thread...");
-    let qcopy = queue.clone();
-    let handle = thread::spawn(move ||{
-        loop {
-            match qcopy.pop() {
-                Some(x) => {
-                    if x == num-1 as u64 {
-                        break
-                    }
-                },
-                // No work to do ... sleep
-                None => thread::sleep(Duration::from_millis(100)),
+    for _ in 0..num_writers {
+        let qcopy = queue.clone();
+        let handle = thread::spawn(move ||{
+            loop {
+                match qcopy.pop() {
+                    Some(x) => {
+                        if x >= num as u64 {
+                            break
+                        }
+                    },
+                    // No work to do ... sleep
+                    None => thread::sleep(Duration::from_millis(100)),
+                }
             }
-        }
-    });
-    handles.push(handle);
+        });
+        handles.push(handle);
+    }
 
     // Wait for all threads to return
     trace!("Waiting for worker threads to return ...");

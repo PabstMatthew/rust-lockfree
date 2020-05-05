@@ -6,6 +6,8 @@ import numpy as np
 import pandas as pd
 
 from statistics import mean
+from tqdm import tqdm
+from itertools import product
 
 # N   = times to run for each measurement
 # CUT = outliers to cut from both ends
@@ -26,6 +28,8 @@ BENCHS = [
     "mem",
 ]
 
+NTHREADS = list(range(2, 18, 2))
+
 def run(cmd):
     cmd = cmd.strip()
     result = subprocess.run(cmd.split(),
@@ -41,32 +45,39 @@ def run(cmd):
     return stdout, stderr
 
 def handle_cli():
-    global TIME_PROG, MODE, N, CUT
+    global TIME_PROG, MODE, N, CUT, NTHREADS
 
     # /usr/bin/time is needed for memory usage
     # This is different than shell function time()
     TIME_PROG = run("which time")[0]
 
     if len(sys.argv) > 1 and sys.argv[1] == "--release":
-        print("Running in release mode (will take long af)")
+        print("Running in release mode (takes ~10m)")
         run("cargo build --release")
         MODE = "release"
         N = 6
         CUT = 1
     else:
-        print("Running in fast mode")
-        print("Use --release for more accurate timings")
+        print("Running in fast mode (takes ~1m)")
+        print("Use --release for more accuracy and different numbers of threads")
         run("cargo build")
         MODE = "debug"
         N = 1
         CUT = 0
+        NTHREADS = [16]
 
     print(" - Running {} time(s)\n"
           " - Removing {} outliers from each end\n".format(N, CUT))
 
-def get_time(impl, bench):
+def get_time(impl, bench, nthreads):
     cmd = ("{} -f \"%M\" ./target/{}/rust-lockfree "
-           "-i {} -b {} -v 0").format(TIME_PROG, MODE, impl, bench)
+           "-i {} -b {} -n {} -v 0").format(
+                TIME_PROG,
+                MODE,
+                impl,
+                bench,
+                nthreads)
+
     stdout, stderr = run(cmd)
 
     time, mem = -1, int(stderr.strip("\""))
@@ -77,10 +88,10 @@ def get_time(impl, bench):
 
     return time, mem
 
-def get_avg_time(impl, bench):
+def get_avg_time(impl, bench, nthreads):
     times, mems = [], []
     for _ in range(N):
-        t, m = get_time(impl, bench)
+        t, m = get_time(impl, bench, nthreads)
         times.append(t)
         mems.append(m)
 
@@ -92,14 +103,14 @@ def get_avg_time(impl, bench):
 
 def measure_times():
     rows = []
-    for bench in BENCHS:
-        for impl in IMPLS:
-            time, mem = get_avg_time(impl, bench)
-            rows.append((bench, impl, time, mem))
+    for bench, impl, n in tqdm(list(product(BENCHS, IMPLS, NTHREADS))):
+        time, mem = get_avg_time(impl, bench, n)
+        rows.append((bench, impl, n, time, mem))
 
     df = pd.DataFrame(np.array(rows),
         columns=["Benchmark",
             "Implementation",
+            "Threads",
             "Time",
             "Memory",
         ])

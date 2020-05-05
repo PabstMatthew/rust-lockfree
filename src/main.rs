@@ -12,7 +12,7 @@ pub mod sync_queue;
 pub mod dirty_queue;
 pub mod epoch_queue;
 use kernels::{WorkloadType};
-use benchmark::{Benchmark};
+use benchmark::{run_benchmark};
 use log::{info};
 
 ///
@@ -40,8 +40,7 @@ fn main() {
     // Run each benchmark
     info!("Running benchmark(s) ...");
     for workload in &workloads {
-        let mut bench = Benchmark::new(&opts.impl_type, workload);
-        let res = bench.run();
+        let res = run_benchmark(opts.n_threads, &opts.impl_type, workload);
         match res.result {
             Ok(_) => println!("Completed {:?} in {} ms.", &workload, res.duration.as_millis()),
             Err(e) => println!("Failed due to error: {}", e),
