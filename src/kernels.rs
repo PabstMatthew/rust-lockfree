@@ -26,17 +26,6 @@ pub enum WorkloadType {
     MemoryHeavy,
 }
 
-// struct BigStruct {
-//     pub data: [u64; SIZE]
-// }
-
-// impl BigStruct {
-//     pub fn new(d: u64) -> BigStruct {
-//         BigStruct { data: [d; SIZE] }
-//     }
-// }
-
-
 pub fn run_workload(wt: &WorkloadType, it: &ImplType)
     -> Result<i32, BenchmarkError> {
 
@@ -222,10 +211,7 @@ fn memory_heavy(queue: Arc<Box<dyn SyncQueue<u64>>>)
     info!("Running memory-heavy benchmark ...");
 
     // Benchmark constants
-    // Custom implementation w/o gc uses up to 15g and
-    // is killed by kernel. Mutex manages to keep keep
-    // peak memory usage around 300 MB.
-    let num = 2 << 25;
+    let num = 2 << 22;
 
     trace!("Starting worker thread...");
     let mut handles = vec![];
@@ -259,7 +245,6 @@ fn memory_heavy(queue: Arc<Box<dyn SyncQueue<u64>>>)
     while let Some(handle) = handles.pop() {
         handle.join().unwrap();
     }
-
     Ok(0)
 }
 
