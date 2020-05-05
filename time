@@ -9,8 +9,7 @@ from statistics import mean
 
 # N   = times to run for each measurement
 # CUT = outliers to cut from both ends
-# N, CUT = 6, 1
-N, CUT = 1, 0
+TIME_PROG, MODE, N, CUT = [None] * 4
 
 IMPLS = [
     "mutex",
@@ -19,9 +18,13 @@ IMPLS = [
     "crossbeam",
     "custom",
 ]
-def write(msg):
-    sys.stdout.write(msg)
-    sys.stdout.flush()
+
+BENCHS = [
+    "read",
+    "write",
+    "mixed",
+    "mem",
+]
 
 def run(cmd):
     cmd = cmd.strip()
@@ -35,53 +38,77 @@ def run(cmd):
         write("\nCommand '{}' returned exit code {}\n{}\n{}\n".format(cmd,
             result.returncode, stdout, stderr))
         sys.exit(1)
-    return stdout
+    return stdout, stderr
 
-def get_times(impl):
-    read, write, mixed, mem = [-1] * 4
+def handle_cli():
+    global TIME_PROG, MODE, N, CUT
 
-    cmd = "./target/debug/rust-lockfree -i {} -b all -v 0".format(impl)
-    out = run(cmd)
-    for l in out.split("\n"):
+    # /usr/bin/time is needed for memory usage
+    # This is different than shell function time()
+    TIME_PROG = run("which time")[0]
+
+    if len(sys.argv) > 1 and sys.argv[1] == "--release":
+        print("Running in release mode (will take long af)")
+        run("cargo build --release")
+        MODE = "release"
+        N = 6
+        CUT = 1
+    else:
+        print("Running in fast mode")
+        print("Use --release for more accurate timings")
+        run("cargo build")
+        MODE = "debug"
+        N = 1
+        CUT = 0
+
+    print(" - Running {} time(s)\n"
+          " - Removing {} outliers from each end\n".format(N, CUT))
+
+def get_time(impl, bench):
+    cmd = ("{} -f \"%M\" ./target/{}/rust-lockfree "
+           "-i {} -b {} -v 0").format(TIME_PROG, MODE, impl, bench)
+    stdout, stderr = run(cmd)
+
+    time, mem = -1, int(stderr.strip("\""))
+    for l in stdout.strip().split("\n"):
         ints = [int(s) for s in l.split() if s.isdigit()]
-        if "ReadHeavy" in l:
-            read = ints[0]
-        elif "WriteHeavy" in l:
-            write = ints[0]
-        elif "Mixed" in l:
-            mixed = ints[0]
-        elif "MemoryHeavy" in l:
-            mem = ints[0]
-    return read, write, mixed, mem
+        if "Completed" in l:
+            time = ints[0]
 
-def get_avg_times(impl):
-    t = [[], [], [], []]
+    return time, mem
+
+def get_avg_time(impl, bench):
+    times, mems = [], []
     for _ in range(N):
-        r, w, mx, mm = get_times(impl)
-        t[0].append(r)
-        t[1].append(w)
-        t[2].append(mx)
-        t[3].append(mm)
+        t, m = get_time(impl, bench)
+        times.append(t)
+        mems.append(m)
 
-    t = [sorted(l) for l in t]
     if CUT > 0:
-        t = [l[CUT:-CUT] for l in t]
-    t = [mean(l) for l in t]
+        times = sorted(times)[CUT:-CUT]
+        mems = sorted(mems)[CUT:-CUT]
 
-    return t
+    return mean(times), mean(mems)
+
+def measure_times():
+    rows = []
+    for bench in BENCHS:
+        for impl in IMPLS:
+            time, mem = get_avg_time(impl, bench)
+            rows.append((bench, impl, time, mem))
+
+    df = pd.DataFrame(np.array(rows),
+        columns=["Benchmark",
+            "Implementation",
+            "Time",
+            "Memory",
+        ])
+    return df
 
 if __name__ == '__main__':
-    run("cargo build")
-    print("Running {} time(s)\n"
-          "Removing {} outliers from each end".format(N, CUT))
+    handle_cli()
 
-    d = [[i] + get_avg_times(i) for i in IMPLS]
-    df = pd.DataFrame(np.array(d),
-        columns=["impl",
-            "ReadHeavy",
-            "WriteHeavy",
-            "Mixed",
-            "MemoryHeavy"
-        ])
+    df = measure_times()
     print(df)
+    print("Time is in ms, peak memory usage is in KB.")
     df.to_csv("times.csv", index=False)
