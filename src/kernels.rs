@@ -26,16 +26,15 @@ pub enum WorkloadType {
     MemoryHeavy,
 }
 
-const SIZE : usize = 10000;
-struct BigStruct {
-    pub data: [u64; SIZE]
-}
+// struct BigStruct {
+//     pub data: [u64; SIZE]
+// }
 
-impl BigStruct {
-    pub fn new(d: u64) -> BigStruct {
-        BigStruct { data: [d; SIZE] }
-    }
-}
+// impl BigStruct {
+//     pub fn new(d: u64) -> BigStruct {
+//         BigStruct { data: [d; SIZE] }
+//     }
+// }
 
 
 pub fn run_workload(wt: &WorkloadType, it: &ImplType)
@@ -45,8 +44,7 @@ pub fn run_workload(wt: &WorkloadType, it: &ImplType)
         WorkloadType::ReadHeavy => read_heavy(Arc::new(create_impl::<u64>(it))),
         WorkloadType::WriteHeavy => write_heavy(Arc::new(create_impl::<u64>(it))),
         WorkloadType::Mixed => mixed(Arc::new(create_impl::<u64>(it))),
-        WorkloadType::MemoryHeavy =>
-            memory_heavy(Arc::new(create_impl::<Box<BigStruct>>(it))),
+        WorkloadType::MemoryHeavy => memory_heavy(Arc::new(create_impl::<u64>(it))),
     }
 }
 
@@ -219,7 +217,7 @@ fn mixed(queue: Arc<Box<dyn SyncQueue<u64>>>) -> Result<i32, BenchmarkError> {
     }
 }
 
-fn memory_heavy(queue: Arc<Box<dyn SyncQueue<Box<BigStruct>>>>)
+fn memory_heavy(queue: Arc<Box<dyn SyncQueue<u64>>>)
     -> Result<i32, BenchmarkError> {
     info!("Running memory-heavy benchmark ...");
 
@@ -227,14 +225,14 @@ fn memory_heavy(queue: Arc<Box<dyn SyncQueue<Box<BigStruct>>>>)
     // Custom implementation w/o gc uses up to 15g and
     // is killed by kernel. Mutex manages to keep keep
     // peak memory usage around 300 MB.
-    let num = 2 << 17;
+    let num = 2 << 25;
 
     trace!("Starting worker thread...");
     let mut handles = vec![];
     let qcopy = queue.clone();
     let handle = thread::spawn(move ||{
         for i in 0..num {
-            qcopy.push(Box::new(BigStruct::new(i as u64)));
+            qcopy.push(i);
         }
     });
     handles.push(handle);
@@ -245,7 +243,7 @@ fn memory_heavy(queue: Arc<Box<dyn SyncQueue<Box<BigStruct>>>>)
         loop {
             match qcopy.pop() {
                 Some(x) => {
-                    if x.data[0] == num-1 as u64 {
+                    if x == num-1 as u64 {
                         break
                     }
                 },
