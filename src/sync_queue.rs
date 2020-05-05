@@ -2,7 +2,6 @@ use std::collections::VecDeque;
 use std::sync::Mutex;
 use spin::Mutex as Spinlock;
 use crossbeam_queue::SegQueue;
-use crossbeam_epoch::sync::queue::Queue as CBEpochQueue;
 use lockfree::queue::Queue as LFQueue;
 use dirty_queue::DirtyQueue;
 use epoch_queue::EpochQueue;
