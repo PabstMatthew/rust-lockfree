@@ -2,8 +2,10 @@ use std::collections::VecDeque;
 use std::sync::Mutex;
 use spin::Mutex as Spinlock;
 use crossbeam_queue::SegQueue;
+use crossbeam_epoch::sync::queue::Queue as CBEpochQueue;
 use lockfree::queue::Queue as LFQueue;
-use custom_queue::CustomQueue;
+use dirty_queue::DirtyQueue;
+use epoch_queue::EpochQueue;
 
 pub trait SyncQueue<T>: Send + Sync {
     fn pop(&self) -> Option<T>;
@@ -16,7 +18,8 @@ pub enum ImplType {
     SpinLock,
     Crossbeam,
     Lockfree,
-    Custom, // TODO eventually
+    Dirty, 
+    Epoch,
 }
 
 /// Constructor function for building queues given an ImplType.
@@ -26,7 +29,8 @@ pub fn create_impl<T: 'static + Sync + Send>(t: &ImplType) -> Box<dyn SyncQueue:
         ImplType::SpinLock => Box::new(SpinQueue::<T>::new()),
         ImplType::Crossbeam => Box::new(CrossbeamQueue::<T>::new()),
         ImplType::Lockfree => Box::new(LockfreeQueue::<T>::new()),
-        ImplType::Custom => Box::new(OurQueue::<T>::new()),
+        ImplType::Dirty => Box::new(DirtyQueue::<T>::new()),
+        ImplType::Epoch => Box::new(EpochQueue::<T>::new()),
     }
 }
 
@@ -123,23 +127,3 @@ impl<T: Send + Sync> SyncQueue<T> for LockfreeQueue<T> {
     }
 }
 
-struct OurQueue<T> {
-    q: CustomQueue<T>,
-}
-
-impl<T> OurQueue<T> {
-    pub fn new() -> OurQueue<T> {
-        OurQueue { q: CustomQueue::new(), }
-    }
-}
-
-
-impl<T: Send + Sync> SyncQueue<T> for OurQueue<T> {
-    fn pop(&self) -> Option<T> {
-        self.q.pop()
-    }
-
-    fn push(&self, elem: T) {
-        self.q.push(elem)
-    }
-}

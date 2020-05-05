@@ -9,7 +9,6 @@ use clap::{Arg, App};
 
 #[derive(Clone, Debug)]
 pub struct CmdOptions {
-    // TODO command line options
     pub impl_type: ImplType,
     pub benchmark: String,
     pub verbosity: usize,
@@ -36,7 +35,7 @@ impl CmdOptions {
                     .required(false)
                     .takes_value(true)
                     .help("specifies the implementation to evaluate
-                          \n\toptions include mutex, spin, lockfree, crossbeam, and custom"))
+                          \n\toptions include mutex, spin, lockfree, crossbeam, dirty, and epoch"))
             .arg(Arg::with_name("bench")
                     .short("b")
                     .required(false)
@@ -56,7 +55,8 @@ impl CmdOptions {
             "spin" => ImplType::SpinLock,
             "lockfree" => ImplType::Lockfree,
             "crossbeam" => ImplType::Crossbeam,
-            "custom" => ImplType::Custom,
+            "dirty" => ImplType::Dirty,
+            "epoch" => ImplType::Epoch,
             _ => panic!("Invalid choice of implementation type!"),
         };
 
