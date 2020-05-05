@@ -1,10 +1,9 @@
 use std::time::{Instant, Duration};
-use std::sync::Arc;
-use sync_queue::{SyncQueue, ImplType, create_impl};
+use sync_queue::{ImplType};
 use kernels::{BenchmarkError, WorkloadType, run_workload};
 
 pub struct Benchmark {
-    queue: Arc<Box<dyn SyncQueue<u64>>>,
+    impl_type: ImplType,
     workload_type: WorkloadType,
 }
 
@@ -15,16 +14,15 @@ pub struct BenchmarkResult {
 
 impl Benchmark {
     pub fn new(impl_type: &ImplType, workload_type: &WorkloadType) -> Benchmark {
-        let queue = Arc::new(create_impl(impl_type));
         Benchmark {
-            queue: queue,
+            impl_type: impl_type.clone(),
             workload_type: workload_type.clone(),
         }
     }
 
     pub fn run(&mut self) -> BenchmarkResult {
         let start = Instant::now();
-        let result = run_workload(&self.workload_type, self.queue.clone());
+        let result = run_workload(&self.workload_type, &self.impl_type); 
         let duration = start.elapsed();
         BenchmarkResult {
             result: result,

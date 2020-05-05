@@ -3,7 +3,7 @@ use log::{trace, info};
 use std::sync::atomic::{AtomicI32, Ordering};
 use std::thread;
 use std::fmt;
-use sync_queue::{SyncQueue};
+use sync_queue::{SyncQueue, ImplType, create_impl};
 use std::time::Duration;
 
 // Used to indicate that a benchmark failed due to the queue implementation
@@ -26,14 +26,27 @@ pub enum WorkloadType {
     MemoryHeavy,
 }
 
-pub fn run_workload(t: &WorkloadType, q: Arc<Box<dyn SyncQueue<u64>>>)
+const SIZE : usize = 10000;
+struct BigStruct {
+    pub data: [u64; SIZE]
+}
+
+impl BigStruct {
+    pub fn new(d: u64) -> BigStruct {
+        BigStruct { data: [d; SIZE] }
+    }
+}
+
+
+pub fn run_workload(wt: &WorkloadType, it: &ImplType)
     -> Result<i32, BenchmarkError> {
 
-    match t {
-        WorkloadType::ReadHeavy => read_heavy(q),
-        WorkloadType::WriteHeavy => write_heavy(q),
-        WorkloadType::Mixed => mixed(q),
-        WorkloadType::MemoryHeavy => memory_heavy(q),
+    match wt {
+        WorkloadType::ReadHeavy => read_heavy(Arc::new(create_impl::<u64>(it))),
+        WorkloadType::WriteHeavy => write_heavy(Arc::new(create_impl::<u64>(it))),
+        WorkloadType::Mixed => mixed(Arc::new(create_impl::<u64>(it))),
+        WorkloadType::MemoryHeavy =>
+            memory_heavy(Arc::new(create_impl::<Box<BigStruct>>(it))),
     }
 }
 
@@ -206,8 +219,49 @@ fn mixed(queue: Arc<Box<dyn SyncQueue<u64>>>) -> Result<i32, BenchmarkError> {
     }
 }
 
-fn memory_heavy(_queue: Arc<Box<dyn SyncQueue<u64>>>) -> Result<i32, BenchmarkError> {
+fn memory_heavy(queue: Arc<Box<dyn SyncQueue<Box<BigStruct>>>>)
+    -> Result<i32, BenchmarkError> {
     info!("Running memory-heavy benchmark ...");
+
+    // Benchmark constants
+    // Custom implementation w/o gc uses up to 15g and
+    // is killed by kernel. Mutex manages to keep keep
+    // peak memory usage around 300 MB.
+    let num = 2 << 17;
+
+    trace!("Starting worker thread...");
+    let mut handles = vec![];
+    let qcopy = queue.clone();
+    let handle = thread::spawn(move ||{
+        for i in 0..num {
+            qcopy.push(Box::new(BigStruct::new(i as u64)));
+        }
+    });
+    handles.push(handle);
+
+    trace!("Starting worker thread...");
+    let qcopy = queue.clone();
+    let handle = thread::spawn(move ||{
+        loop {
+            match qcopy.pop() {
+                Some(x) => {
+                    if x.data[0] == num-1 as u64 {
+                        break
+                    }
+                },
+                // No work to do ... sleep
+                None => thread::sleep(Duration::from_millis(100)),
+            }
+        }
+    });
+    handles.push(handle);
+
+    // Wait for all threads to return
+    trace!("Waiting for worker threads to return ...");
+    while let Some(handle) = handles.pop() {
+        handle.join().unwrap();
+    }
+
     Ok(0)
 }
 
