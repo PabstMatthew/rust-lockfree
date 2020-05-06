@@ -23,6 +23,7 @@ IMPLS = [
 ]
 
 outdir = "output/"
+ratio = 3 / 5
 
 def handle_cli():
     fname = "final_times.csv"
@@ -48,7 +49,8 @@ def make_time_vs_cores_plot(data):
     plt.clf()
 
     # 2 by 2 grid for four benchmarks
-    fig, axs = plt.subplots(2, 2, figsize=(20, 12), dpi=300)
+    sz = 15
+    fig, axs = plt.subplots(2, 2, figsize=(sz, sz*ratio), dpi=300)
 
     for i, (bench, bench_name) in enumerate(BENCHES):
         # Calculate axis
@@ -78,7 +80,8 @@ def make_memory_vs_cores_plot(data):
     plt.clf()
 
     # 2 by 2 grid for four benchmarks
-    fig, ax = plt.subplots(1, 1, figsize=(20, 12), dpi=300)
+    sz = 12
+    fig, ax = plt.subplots(1, 1, figsize=(sz, sz*ratio), dpi=300)
 
     bench, bench_name = ("mem", "Memory Heavy")
     for c_i, (impl, impl_name) in enumerate(IMPLS):

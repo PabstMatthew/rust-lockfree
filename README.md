@@ -3,7 +3,7 @@ A benchmark suite for lock-free queues/stacks in Rust, and a custom implementati
 
 ## Building
 ```bash
-cargo build 
+cargo build
 ```
 
 ## Running
