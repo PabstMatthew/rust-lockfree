@@ -11,8 +11,3 @@ cargo build
 ./target/debug/rust-lockfree -h
 ```
 
-## TODO
-1. Write memory-heavy benchmarks.
-2. Complete custom lockfree queue implementation.
-3. Evaluate and write report.
-
