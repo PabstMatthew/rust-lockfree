@@ -18,7 +18,8 @@ IMPLS = [
     "spin",
     "lockfree",
     "crossbeam",
-    "custom",
+    "dirty",
+    "epoch"
 ]
 
 BENCHS = [
